@@ -33,7 +33,7 @@ def draw_link(dwg, length=80, end_r=30, roller_r=12, bend_deg=45, tilt_deg=0, st
 
         return (sx+length*math.cos(tilt_rad), sy-length*math.sin(tilt_rad))
 
-def even_links_ring(n=8, ring_filename='chain.svg', colours=['red', 'blue']):
+def even_links_ring(n=8, ring_filename='ring.svg', colours=['red', 'blue']):
     dwg = svgwrite.Drawing(filename=ring_filename, debug=True, size=(900,900))
     rel_tilt_deg    = 360.0/n
     colour_q        = deque(colours)
@@ -47,6 +47,22 @@ def even_links_ring(n=8, ring_filename='chain.svg', colours=['red', 'blue']):
 
     dwg.save()
 
+def regular_star(n=8, star_filename='star.svg', colours=['red', 'blue']):
+    dwg = svgwrite.Drawing(filename=star_filename, debug=True, size=(900,900))
+    obtuse_deg      = 180-360.0/n
+    acute_deg       = -(180-720.0/n)
+    colour_q        = deque(colours)
+    (sx, sy, abs_tilt_deg, curr_top)  = (450, 200, 0, True)
+    for i in range(0,2*n):
+        curr_colour     = colour_q.popleft()
+        (sx, sy)        = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
+        colour_q.append(curr_colour)
+        abs_tilt_deg   -= obtuse_deg if curr_top else acute_deg
+        curr_top        = not curr_top
+
+    dwg.save()
+
 even_links_ring(n=6, ring_filename="six_links_ring.svg")
 even_links_ring(n=16, ring_filename="sixteen_links_ring.svg")
-
+regular_star(n=5, star_filename="five_pointed_star.svg")
+regular_star(n=6, star_filename="six_pointed_star.svg")
