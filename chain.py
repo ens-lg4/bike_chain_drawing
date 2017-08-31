@@ -6,6 +6,7 @@ from collections import deque
 
 
 def draw_link(dwg, length=80, end_r=30, roller_r=12, bend_deg=45, tilt_deg=0, start=(100,200), colour='black', top=True):
+    min_deg     = math.degrees( 2*math.asin(end_r/length) ) # min_angle constrained by the chain with given parameters
     bend_rad    = math.radians(bend_deg)
     tilt_rad    = math.radians(tilt_deg)
     (sx,sy)     = start
@@ -31,7 +32,7 @@ def draw_link(dwg, length=80, end_r=30, roller_r=12, bend_deg=45, tilt_deg=0, st
 
         dwg.add( group )
 
-        return (sx+length*math.cos(tilt_rad), sy-length*math.sin(tilt_rad))
+        return (sx+length*math.cos(tilt_rad), sy-length*math.sin(tilt_rad), min_deg)
 
 def even_links_ring(n=8, ring_filename='ring.svg', colours=['red', 'blue']):
     dwg = svgwrite.Drawing(filename=ring_filename, debug=True, size=(900,900))
@@ -40,14 +41,14 @@ def even_links_ring(n=8, ring_filename='ring.svg', colours=['red', 'blue']):
     (sx, sy, abs_tilt_deg, curr_top)  = (450, 100, 0, True)
     for i in range(0,n):
         curr_colour     = colour_q.popleft()
-        (sx, sy)        = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
+        (sx, sy, min_a) = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
         colour_q.append(curr_colour)
         abs_tilt_deg   -= rel_tilt_deg
         curr_top        = not curr_top
 
     dwg.save()
 
-def regular_star(n=8, star_filename='star.svg', colours=['red', 'blue']):
+def regular_star(n=8, star_filename='star.svg', colours=['red', 'blue'], safe_gap=5):
     dwg = svgwrite.Drawing(filename=star_filename, debug=True, size=(900,900))
     concave_deg     = 360.0/n
     convex_deg      = -720.0/n
@@ -55,14 +56,17 @@ def regular_star(n=8, star_filename='star.svg', colours=['red', 'blue']):
     (sx, sy, abs_tilt_deg, curr_top)  = (450, 200, 0, True)
     for i in range(0,2*n):
         curr_colour     = colour_q.popleft()
-        (sx, sy)        = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
+        (sx, sy, min_a) = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
         colour_q.append(curr_colour)
-        abs_tilt_deg   += convex_deg if curr_top else concave_deg
+        delta           = safe_gap+min_a-convex_deg-180 if 180+convex_deg < min_a+safe_gap else 0
+        abs_tilt_deg   += convex_deg+delta if curr_top else concave_deg-delta
         curr_top        = not curr_top
 
     dwg.save()
 
 even_links_ring(n=6, ring_filename="six_links_ring.svg")
 even_links_ring(n=16, ring_filename="sixteen_links_ring.svg")
+regular_star(n=3, star_filename="three_pointed_star.svg")
+regular_star(n=5, star_filename="five_pointed_star.svg")
 regular_star(n=6, star_filename="six_pointed_star.svg")
 regular_star(n=8, star_filename="eight_pointed_star.svg")
