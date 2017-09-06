@@ -4,69 +4,97 @@ import math
 import svgwrite
 from collections import deque
 
+class BikeChain:
 
-def draw_link(dwg, length=80, end_r=30, roller_r=12, bend_deg=45, tilt_deg=0, start=(100,200), colour='black', top=True):
-    min_deg     = math.degrees( 2*math.asin(end_r/length) ) # min_angle constrained by the chain with given parameters
-    bend_rad    = math.radians(bend_deg)
-    tilt_rad    = math.radians(tilt_deg)
-    (sx,sy)     = start
-    (rc,rs)     = (end_r*math.cos(bend_rad), end_r*math.sin(bend_rad))
-    R           = length/(2.0*math.cos(bend_rad))-end_r
-    H           = length/2.0*math.tan(bend_rad)
-    if end_r<=length/2 and R<H:
-        dx          = length - 2*rc
-        dy          = 2*rs
+    def __init__(self, length=80, r=30, roller_r=12, bend_deg=45):
+        self.length     = length
+        self.r          = r
+        self.roller_r   = roller_r
+        self.bend_rad   = math.radians(bend_deg)
+        self.R          = self.length/(2.0*math.cos(self.bend_rad))-self.r
+        self.H          = self.length/2.0*math.tan(self.bend_rad)
+        self.rc         = self.r*math.cos(self.bend_rad)
+        self.rs         = self.r*math.sin(self.bend_rad)
+        self.dx         = self.length - 2*self.rc
+        self.dy         = 2*self.rs
+        if not( self.r<=self.length/2 and self.R<self.H):
+            print("The parameters of BikeChain link are out of bounds")
 
-        group   = dwg.g( transform='rotate(%f,%f,%f)' % (-tilt_deg,sx,sy), stroke=colour, stroke_width='2' )
 
+    def min_angle_deg(self):
+        "Report the minimal angle constained by the parameters of the chain"
+        return math.degrees( 2*math.asin(self.r/self.length) )
+
+
+    def add_horizontal_link(self, dwg, target_group, top=True):
+        "Draw one horizontal link of the chain on a rotated and translated group element"
         if top:
-            group.add( dwg.path( d="M %f,%f m %f,%f a %f,%f 0 1,0 %f,%f a %f,%f 0 0,1 %f,%f a %f,%f 0 1,0 %f,%f a %f,%f 0 0,1 %f,%f Z"
-                        % (sx, sy,  rc, -rs,  end_r, end_r, 0, dy,  R, R, dx, 0,  end_r, end_r, 0, -dy,  R, R, -dx, 0),
-                         fill='none' ) )
-            group.add( dwg.circle( center=(sx,sy),        r=roller_r, fill='none' ) )
-            group.add( dwg.circle( center=(sx+length,sy), r=roller_r, fill='none' ) )
+            target_group.add( dwg.path( d="M %f,%f a %f,%f 0 1,0 %f,%f a %f,%f 0 0,1 %f,%f a %f,%f 0 1,0 %f,%f a %f,%f 0 0,1 %f,%f Z"
+                % (self.rc, -self.rs,
+                   self.r, self.r, 0, self.dy,
+                   self.R, self.R, self.dx, 0,
+                   self.r, self.r, 0, -self.dy,
+                   self.R, self.R, -self.dx, 0),
+                fill='none' ) )
+            target_group.add( dwg.circle( center=(0,0),           r=self.roller_r, fill='none' ) )
+            target_group.add( dwg.circle( center=(self.length,0), r=self.roller_r, fill='none' ) )
         else:
-            group.add( dwg.path( d="M %f,%f m %f,%f a %f,%f 0 0,1 %f,%f m %f,%f a %f,%f 0 0,1 %f,%f"
-                        % (sx, sy,  rc, dy-rs,  R, R, dx, 0,  0, -dy,  R, R, -dx, 0),
+            target_group.add( dwg.path( d="M %f,%f a %f,%f 0 0,1 %f,%f m %f,%f a %f,%f 0 0,1 %f,%f"
+                        % (self.rc,  self.dy-self.rs,  self.R, self.R,  self.dx, 0,
+                           0,       -self.dy,          self.R, self.R, -self.dx, 0),
                         fill='none' ) )
 
-        dwg.add( group )
 
-        return (sx+length*math.cos(tilt_rad), sy-length*math.sin(tilt_rad), min_deg)
+    def draw_chain_loop(self, filename='chain_loop.svg', turns=[90], colours=['red', 'blue'], canvas_size=(900,900)):
+        "Given a sequence of turn angles iterate drawing links on rotated+translated groups until one full turn is accumulated"
+        dwg         = svgwrite.Drawing(filename=filename, debug=True, size=canvas_size)
+        turn_q      = deque(turns)
+        colour_q    = deque(colours)
+        (sx, sy, abs_tilt_deg, curr_top)  = (canvas_size[0]/2, canvas_size[1]/4, 0, True)
+        while abs_tilt_deg!=360:
+            curr_turn       = turn_q.popleft()
+            curr_colour     = colour_q.popleft()
 
-def even_links_ring(n=8, ring_filename='ring.svg', colours=['red', 'blue']):
-    dwg = svgwrite.Drawing(filename=ring_filename, debug=True, size=(900,900))
-    rel_tilt_deg    = 360.0/n
-    colour_q        = deque(colours)
-    (sx, sy, abs_tilt_deg, curr_top)  = (450, 100, 0, True)
-    for i in range(0,n):
-        curr_colour     = colour_q.popleft()
-        (sx, sy, min_a) = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
-        colour_q.append(curr_colour)
-        abs_tilt_deg   -= rel_tilt_deg
-        curr_top        = not curr_top
+            target_group    = dwg.g( transform='translate(%f,%f),rotate(%f,0,0)' % (sx,sy,abs_tilt_deg), stroke=curr_colour, stroke_width='2' )
+            self.add_horizontal_link(dwg, target_group, top=curr_top)
+            dwg.add( target_group )
 
-    dwg.save()
+            turn_rad        = math.radians(abs_tilt_deg)
+            sx             += self.length*math.cos(turn_rad)
+            sy             += self.length*math.sin(turn_rad)
 
-def regular_star(n=8, star_filename='star.svg', colours=['red', 'blue'], safe_gap=5):
-    dwg = svgwrite.Drawing(filename=star_filename, debug=True, size=(900,900))
+            abs_tilt_deg   += curr_turn
+            turn_q.append(curr_turn)
+            colour_q.append(curr_colour)
+            curr_top        = not curr_top
+
+        dwg.save()
+
+
+def draw_regular_ring(n=8, filename='ring.svg', colours=['red', 'blue']):
+    "Draw a regular ring out of a given number of links"
+    chain           = BikeChain()
+    convex_deg      = 360.0/n
+    chain.draw_chain_loop(filename=filename, turns=[convex_deg])
+
+
+def draw_regular_star(n=8, filename='star.svg', colours=['red', 'blue'], safe_gap=5):
+    "Draw a regular star with given number of points; avoid links bumping into each other for v.acute angles by pulling the star apart a bit"
+    chain           = BikeChain()
+    min_angle_deg   = chain.min_angle_deg()
     concave_deg     = 360.0/n
-    convex_deg      = -720.0/n
-    colour_q        = deque(colours)
-    (sx, sy, abs_tilt_deg, curr_top)  = (450, 200, 0, True)
-    for i in range(0,2*n):
-        curr_colour     = colour_q.popleft()
-        (sx, sy, min_a) = draw_link(dwg, start=(sx, sy), tilt_deg=abs_tilt_deg, colour=curr_colour, top=curr_top)
-        colour_q.append(curr_colour)
-        delta           = safe_gap+min_a-convex_deg-180 if 180+convex_deg < min_a+safe_gap else 0
-        abs_tilt_deg   += convex_deg+delta if curr_top else concave_deg-delta
-        curr_top        = not curr_top
+    convex_deg      = 720.0/n
+    if 180-convex_deg < min_angle_deg+safe_gap:
+        delta           = safe_gap+min_angle_deg+convex_deg-180
+        convex_deg     -= delta
+        concave_deg    -= delta
+    chain.draw_chain_loop(filename=filename, turns=[-concave_deg, convex_deg])
 
-    dwg.save()
 
-even_links_ring(n=6, ring_filename="six_links_ring.svg")
-even_links_ring(n=16, ring_filename="sixteen_links_ring.svg")
-regular_star(n=3, star_filename="three_pointed_star.svg")
-regular_star(n=5, star_filename="five_pointed_star.svg")
-regular_star(n=6, star_filename="six_pointed_star.svg")
-regular_star(n=8, star_filename="eight_pointed_star.svg")
+if __name__ == '__main__':
+    draw_regular_ring(n=6,  filename="ring_6.svg")
+    draw_regular_ring(n=16, filename="ring_16.svg")
+    draw_regular_star(n=3,  filename="star_3.svg")
+    draw_regular_star(n=5,  filename="star_5.svg")
+    draw_regular_star(n=6,  filename="star_6.svg")
+    draw_regular_star(n=8,  filename="star_8.svg")
