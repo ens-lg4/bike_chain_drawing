@@ -26,45 +26,61 @@ class BikeChain:
         return math.degrees( 2*math.asin(self.r/self.length) )
 
 
-    def add_horizontal_link(self, dwg, target_group, top=True):
-        "Draw one horizontal link of the chain on a rotated and translated group element"
+    def add_horizontal_link(self, dwg, sx, sy, abs_tilt_deg, curr_colour, top=True):
+        "Draw one tilted link of the chain on the main canvas"
+
+        abs_tilt_rad    = math.radians( abs_tilt_deg )
+        A_x             = sx + self.r * math.cos(abs_tilt_rad - self.bend_rad)
+        A_y             = sy + self.r * math.sin(abs_tilt_rad - self.bend_rad)
+        cos_phi         = math.cos( abs_tilt_rad )
+        sin_phi         = math.sin( abs_tilt_rad )
+        AB_x            = - self.dy * sin_phi
+        AB_y            =   self.dy * cos_phi
+        BC_x            =   self.dx * cos_phi
+        BC_y            =   self.dx * sin_phi
+        nx              = sx + self.length * cos_phi
+        ny              = sy + self.length * sin_phi
+
+        target_group    = dwg.g( stroke=curr_colour, stroke_width='2' )
+
         if top:
             target_group.add( dwg.path( d="M %f,%f a %f,%f 0 1,0 %f,%f a %f,%f 0 0,1 %f,%f a %f,%f 0 1,0 %f,%f a %f,%f 0 0,1 %f,%f Z"
-                % (self.rc, -self.rs,
-                   self.r, self.r, 0, self.dy,
-                   self.R, self.R, self.dx, 0,
-                   self.r, self.r, 0, -self.dy,
-                   self.R, self.R, -self.dx, 0),
+                % (A_x, A_y,
+                   self.r, self.r,  AB_x,  AB_y,
+                   self.R, self.R,  BC_x,  BC_y,
+                   self.r, self.r, -AB_x, -AB_y,
+                   self.R, self.R, -BC_x, -BC_y),
                 fill='none' ) )
-            target_group.add( dwg.circle( center=(0,0),           r=self.roller_r, fill='none' ) )
-            target_group.add( dwg.circle( center=(self.length,0), r=self.roller_r, fill='none' ) )
+
+            target_group.add( dwg.circle( center=(sx,sy),   r=self.roller_r, fill='none' ) )
+            target_group.add( dwg.circle( center=(nx,ny),   r=self.roller_r, fill='none' ) )
         else:
-            target_group.add( dwg.path( d="M %f,%f a %f,%f 0 0,1 %f,%f m %f,%f a %f,%f 0 0,1 %f,%f"
-                        % (self.rc,  self.dy-self.rs,  self.R, self.R,  self.dx, 0,
-                           0,       -self.dy,          self.R, self.R, -self.dx, 0),
-                        fill='none' ) )
+            target_group.add( dwg.path( d="M %f,%f m %f,%f a %f,%f 0 0,1 %f,%f m %f,%f a %f,%f 0 0,1 %f,%f"
+                % (A_x, A_y, AB_x,  AB_y,
+                   self.R, self.R,  BC_x,  BC_y,
+                            -AB_x, -AB_y,
+                   self.R, self.R, -BC_x, -BC_y),
+                fill='none' ) )
+
+        dwg.add( target_group )
+
+        return (nx, ny)
 
 
     def draw_chain_loop(self, filename='chain_loop.svg', turns=[90], colours=['red', 'blue'], canvas_size=(900,900)):
         "Given a sequence of turn angles iterate drawing links on rotated+translated groups until one full turn is accumulated"
-        dwg         = svgwrite.Drawing(filename=filename, debug=True, size=canvas_size)
-        turn_q      = deque(turns)
-        colour_q    = deque(colours)
+        dwg             = svgwrite.Drawing(filename=filename, debug=True, size=canvas_size)
+        turn_q          = deque(turns)
+        colour_q        = deque(colours)
         (sx, sy, abs_tilt_deg, curr_top)  = (canvas_size[0]/2, canvas_size[1]/4, 0, True)
         while abs_tilt_deg!=360:
-            curr_turn       = turn_q.popleft()
+            curr_turn_deg   = turn_q.popleft()
             curr_colour     = colour_q.popleft()
 
-            target_group    = dwg.g( transform='translate(%f,%f),rotate(%f,0,0)' % (sx,sy,abs_tilt_deg), stroke=curr_colour, stroke_width='2' )
-            self.add_horizontal_link(dwg, target_group, top=curr_top)
-            dwg.add( target_group )
+            (sx, sy)        = self.add_horizontal_link(dwg, sx, sy, abs_tilt_deg, curr_colour, top=curr_top)
+            abs_tilt_deg   += curr_turn_deg
 
-            turn_rad        = math.radians(abs_tilt_deg)
-            sx             += self.length*math.cos(turn_rad)
-            sy             += self.length*math.sin(turn_rad)
-
-            abs_tilt_deg   += curr_turn
-            turn_q.append(curr_turn)
+            turn_q.append(curr_turn_deg)
             colour_q.append(curr_colour)
             curr_top        = not curr_top
 
