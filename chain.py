@@ -92,9 +92,9 @@ def draw_regular_star(n=8, filename='star.svg', colours=['red', 'blue'], safe_ga
 
 
 if __name__ == '__main__':
-    draw_regular_ring(n=6,  filename="ring_6.svg")
-    draw_regular_ring(n=16, filename="ring_16.svg")
-    draw_regular_star(n=3,  filename="star_3.svg")
-    draw_regular_star(n=5,  filename="star_5.svg")
-    draw_regular_star(n=6,  filename="star_6.svg")
-    draw_regular_star(n=8,  filename="star_8.svg")
+    draw_regular_ring(n=6,  filename="examples/ring_6.svg")
+    draw_regular_ring(n=16, filename="examples/ring_16.svg")
+    draw_regular_star(n=3,  filename="examples/star_3.svg")
+    draw_regular_star(n=5,  filename="examples/star_5.svg")
+    draw_regular_star(n=6,  filename="examples/star_6.svg")
+    draw_regular_star(n=8,  filename="examples/star_8.svg")
