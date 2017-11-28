@@ -87,14 +87,15 @@ class BikeChain:
         dwg.save()
 
 
-def draw_regular_ring(n=8, filename='ring.svg', colours=['red', 'blue']):
+def draw_regular_ring(n=8, freq=1, filename='ring.svg', colours=['red', 'blue']):
     "Draw a regular ring out of a given number of links"
     chain           = BikeChain()
     convex_deg      = 360.0/n
-    chain.draw_chain_loop(filename=filename, turns=[convex_deg])
+    straight        = [0]*(freq-1)
+    chain.draw_chain_loop(filename=filename, turns=(straight + [convex_deg]) )
 
 
-def draw_regular_star(n=8, filename='star.svg', colours=['red', 'blue'], safe_gap=5):
+def draw_regular_star(n=8, freq=1, filename='star.svg', colours=['red', 'blue'], safe_gap=5):
     "Draw a regular star with given number of points; avoid links bumping into each other for v.acute angles by pulling the star apart a bit"
     chain           = BikeChain()
     min_angle_deg   = chain.min_angle_deg()
@@ -104,13 +105,16 @@ def draw_regular_star(n=8, filename='star.svg', colours=['red', 'blue'], safe_ga
         delta           = safe_gap+min_angle_deg+convex_deg-180
         convex_deg     -= delta
         concave_deg    -= delta
-    chain.draw_chain_loop(filename=filename, turns=[-concave_deg, convex_deg])
+    straight        = [0]*(freq-1)
+    chain.draw_chain_loop(filename=filename, turns=(straight + [-concave_deg] + straight + [convex_deg]) )
 
 
 if __name__ == '__main__':
     draw_regular_ring(n=6,  filename="examples/ring_6.svg")
+    draw_regular_ring(n=6, freq=3, filename="examples/ring_6_3.svg")
     draw_regular_ring(n=16, filename="examples/ring_16.svg")
     draw_regular_star(n=3,  filename="examples/star_3.svg")
     draw_regular_star(n=5,  filename="examples/star_5.svg")
+    draw_regular_star(n=5, freq=2, filename="examples/star_5_2.svg")
     draw_regular_star(n=6,  filename="examples/star_6.svg")
     draw_regular_star(n=8,  filename="examples/star_8.svg")
