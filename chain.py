@@ -72,7 +72,7 @@ class BikeChain:
         dwg             = svgwrite.Drawing(filename=filename, debug=True, size=canvas_size)
         turn_q          = deque(turns)
         colour_q        = deque(colours)
-        (sx, sy, abs_tilt_deg, curr_top)  = (canvas_size[0]/2, canvas_size[1]/4, 0, True)
+        (sx, sy, abs_tilt_deg, curr_top)  = (canvas_size[0]/4, canvas_size[1]/4, 0, True)
         while abs_tilt_deg!=360:
             curr_turn_deg   = turn_q.popleft()
             curr_colour     = colour_q.popleft()
