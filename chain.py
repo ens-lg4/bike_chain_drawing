@@ -110,6 +110,8 @@ def draw_regular_star(n=8, freq=1, filename='star.svg', colours=['red', 'blue'],
 
 
 if __name__ == '__main__':
+    draw_regular_ring(n=4, freq=3, filename="examples/ring_4_3.svg")
+    draw_regular_ring(n=4, freq=4, filename="examples/ring_4_4.svg")
     draw_regular_ring(n=6,  filename="examples/ring_6.svg")
     draw_regular_ring(n=6, freq=3, filename="examples/ring_6_3.svg")
     draw_regular_ring(n=16, filename="examples/ring_16.svg")
